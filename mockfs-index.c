@@ -81,10 +81,12 @@ int main(int argc, char *argv[]) {
     // Define the callback as an inline function, so we can use the variables inside main's scope.
     int list(const char *pathname, const struct stat *status, int type, struct FTW *ftwbuf) {
         char parent_path[PATH_SIZE];
+        char path[PATH_SIZE];
         static int first = 1;
         // Set the inode id of the root dir to 0, as to have a starting point.
         __ino_t parent_ino = 0;
         strcpy(parent_path, pathname);
+        strcpy(path, pathname);
         parent_path[ftwbuf->base] = '\0';
         struct stat st;
         if (verbose_flag) {
@@ -97,7 +99,10 @@ int main(int argc, char *argv[]) {
             stat(parent_path, &st);
             parent_ino = st.st_ino;
         }
-        sprintf(sql, INSERT_QUERY, status->st_ino, parent_ino, &pathname[ftwbuf->base], status->st_mode);
+        if (strcpy(path, ".")) {
+            path[0] = '/';
+        }
+        sprintf(sql, INSERT_QUERY, status->st_ino, parent_ino, &path[ftwbuf->base], status->st_mode);
         rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);

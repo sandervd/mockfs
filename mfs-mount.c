@@ -31,7 +31,6 @@ static int mfs_getattr(const char *path, struct stat *stbuf) {
     sqlite3 *db;
     int rc;
     struct inode inode;
-    inode.id = -1;
     memset(stbuf, 0, sizeof(struct stat));
 
     rc = sqlite3_open("fileindex", &db);
@@ -41,23 +40,13 @@ static int mfs_getattr(const char *path, struct stat *stbuf) {
         exit(EXIT_FAILURE);
     }
 
-    if (strcmp(path, "/") != 0) {
-        inode = get_inode_from_path(db, path + 1);
-    }
-    else {
-        inode = get_inode_from_path(db, ".");
-    }
-    if (strcmp(path, "/") == 0) {
-        stbuf->st_mode = S_IFDIR | 0755;
+    inode = get_inode_from_path(db, path);
+
+    if (inode.id != -1) {
+        stbuf->st_mode = inode.mode;
         stbuf->st_nlink = 2;
-    } else if (strcmp(path, "/test_dir") == 0) {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-    } else if (strcmp(path, hello_path) == 0) {
-        stbuf->st_mode = S_IFREG | 0444;
-        stbuf->st_nlink = 1;
-        stbuf->st_size = strlen(hello_str);
-    } else
+    }
+    else
         res = -ENOENT;
 
     return res;
@@ -76,25 +65,14 @@ static int mfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     for (int i = 0; i < 200; i++) {
         items[i].id = -1;
     }
-
-
-
-
     rc = sqlite3_open("fileindex", &db);
-
-
 
     // Get directory inode.
     if (rc) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
         exit(EXIT_FAILURE);
     }
-    if (strcmp(path, "/") != 0) {
-        inode = get_inode_from_path(db, path);
-    }
-    else {
-        inode = get_inode_from_path(db, ".");
-    }
+    inode = get_inode_from_path(db, path);
     // Get contents of directory inode.
     get_inodes_from_dir(db, items, inode.id);
     int i = 0;
@@ -103,17 +81,9 @@ static int mfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         i++;
     }
 
-    printf("\n\n\nret inode %d\n", inode.id);
-
-    if (strcmp(path, "/") != 0) {
-        return -ENOENT;
-    }
-
-
+    // Add self and parent pointer.
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    //filler(buf, hello_path + 1, NULL, 0);
-    //filler(buf, "test_dir", NULL, 0);
 
     return 0;
 }
@@ -190,13 +160,10 @@ struct inode get_inode_from_path(sqlite3 *db, const char *path) {
         // Full substring
         sub[j] = '\0';
         if (path[i] == '/') {
-            if (j != 0) {
-                inode = lookup_inode(db, sub, &inode);
-                if (inode.id == -1) {
-                    return inode;
-                }
+            inode = lookup_inode(db, sub, &inode);
+            if (inode.id == -1) {
+                return inode;
             }
-
             j = 0;
         } else {
             sub[j] = path[i];
@@ -212,17 +179,6 @@ struct inode get_inode_from_path(sqlite3 *db, const char *path) {
     return inode;
 }
 
-//static int callback(int *inode, int argc, char **argv, char **azColName) {
-//    int i;
-//    // *inode = argv[0];
-//    for (i = 0; i < argc; i++) {
-//        inode = argv[i];
-//        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-//    }
-//    printf("inode: %d\n", inode);
-//    return 0;
-//}
-
 struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
     char sql[500];
     struct inode inode;
@@ -233,6 +189,10 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
     int parent_id = parent_inode->id;
     if (parent_id < 0) {
         parent_id = 0;
+    }
+    if (dir[0] == '\0') {
+        dir[0] = '/';
+        dir[1] = '\0';
     }
 
     printf("\npath: %s\n", dir);
@@ -255,8 +215,6 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         printf("%d|", sqlite3_column_int(res, 1));
         printf("%s|", sqlite3_column_text(res, 2));
         printf("%u\n", sqlite3_column_int(res, 3));
-
-        //rec_count++;
     }
     printf("%s\n", dir);
     return inode;
