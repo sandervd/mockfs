@@ -3,7 +3,12 @@ project(mockfs)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
 
-set(SOURCE_FILES mockfs-index.h mockfs-index.c)
+set(SOURCE_FILES_INDEX mockfs-index.h mockfs-index.c)
+set(SOURCE_FILES_MOUNT mfs-mount.c mfs-mount.h)
 
-add_executable(mockfs ${SOURCE_FILES})
-target_link_libraries(mockfs sqlite3)
+set(CMAKE_C_FLAGS "-D_FILE_OFFSET_BITS=64")
+add_executable(mfs-index ${SOURCE_FILES_INDEX})
+add_executable(mfs-mount ${SOURCE_FILES_MOUNT})
+target_link_libraries(mfs-index sqlite3)
+target_link_libraries(mfs-mount sqlite3)
+target_link_libraries(mfs-mount fuse)
