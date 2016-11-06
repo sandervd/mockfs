@@ -206,20 +206,23 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         dir[0] = '/';
         dir[1] = '\0';
     }
-
-    sprintf(sql, "SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = \"%s\" AND parent_st_ino = %d", dir, (int) parent_id);
-    sqlite3_stmt *res;
-    rc = sqlite3_prepare_v2(db, sql, 1000, &res, &tail);
+    #define SELECT_Q git git"SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = ? AND parent_st_ino = ?;"
+    sqlite3_stmt* sql_statement = NULL;
+    const char* pszUnused;
+    rc = sqlite3_prepare_v2(db, SELECT_Q, -1, &sql_statement, &pszUnused);
+    sqlite3_bind_text(sql_statement, 1, dir, -1, SQLITE_STATIC);
+    sqlite3_bind_int(sql_statement, 2, (int) parent_id);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
         exit(EXIT_FAILURE);
     }
-    while (sqlite3_step(res) == SQLITE_ROW) {
-        inode.id = (__ino_t) sqlite3_column_int(res, 0);
-        inode.pid = (__ino_t) sqlite3_column_int(res, 1);
-        strcpy(inode.name, sqlite3_column_text(res, 2));
-        inode.mode = (__mode_t) sqlite3_column_int(res, 3);
+    while (sqlite3_step(sql_statement) == SQLITE_ROW) {
+        inode.id = (__ino_t) sqlite3_column_int(sql_statement, 0);
+        inode.pid = (__ino_t) sqlite3_column_int(sql_statement, 1);
+        strcpy(inode.name, sqlite3_column_text(sql_statement, 2));
+        inode.mode = (__mode_t) sqlite3_column_int(sql_statement, 3);
     }
+    sqlite3_finalize (sql_statement);
     return inode;
 }
