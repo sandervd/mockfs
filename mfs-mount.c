@@ -206,7 +206,7 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         dir[0] = '/';
         dir[1] = '\0';
     }
-    #define SELECT_Q git git"SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = ? AND parent_st_ino = ?;"
+    #define SELECT_Q "SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = ? AND parent_st_ino = ?;"
     sqlite3_stmt* sql_statement = NULL;
     const char* pszUnused;
     rc = sqlite3_prepare_v2(db, SELECT_Q, -1, &sql_statement, &pszUnused);
