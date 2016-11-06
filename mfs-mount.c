@@ -1,8 +1,5 @@
 #include "mfs-mount.h"
 
-static const char *hello_str = "Hello World!\n";
-static const char *hello_path = "/hello";
-
 static struct fuse_operations mfs_fuse_operations = {
         .getattr    = mfs_fuse_getattr,
         .readdir    = mfs_fuse_readdir,
@@ -96,6 +93,7 @@ static int mfs_fuse_open(const char *path, struct fuse_file_info *fi) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
         exit(EXIT_FAILURE);
     }
+    inode = get_inode_from_path(db, path);
 
     if (inode.id == 0)
         return -ENOENT;
@@ -124,18 +122,13 @@ static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
 
     inode = get_inode_from_path(db, path);
 
-
     if (inode.id == 0)
         return -ENOENT;
 
-    len = strlen(hello_str);
-    if (offset < len) {
-        if (offset + size > len)
-            size = len - offset;
-        memcpy(buf, hello_str + offset, size);
-    } else
-        size = 0;
-
+    for (int i = 0; i < size; i++) {
+        // Write null bytes to the buffer.
+        buf[offset + i] = '\0';
+    }
     return size;
 }
 
