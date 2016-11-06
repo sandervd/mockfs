@@ -56,7 +56,8 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     struct inode inode;
     // @TODO Implement a vector to make size dynamic.
     struct inode items[200];
-    for (int i = 0; i < 200; i++) {
+    int i;
+    for (i = 0; i < 200; i++) {
         items[i].id = 0;
     }
     rc = sqlite3_open("fileindex", &db);
@@ -69,7 +70,7 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     inode = get_inode_from_path(db, path);
     // Get contents of directory inode.
     get_inodes_from_dir(db, items, inode.id);
-    int i = 0;
+    i = 0;
     while (i< 200 && items[i].id != 0) {
         filler(buf, items[i].name, NULL, 0);
         i++;
@@ -106,7 +107,6 @@ static int mfs_fuse_open(const char *path, struct fuse_file_info *fi) {
 
 static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
                          struct fuse_file_info *fi) {
-    size_t len;
     (void) fi;
 
     sqlite3 *db;
@@ -124,12 +124,12 @@ static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
 
     if (inode.id == 0)
         return -ENOENT;
-
-    for (int i = 0; i < size; i++) {
+    int i;
+    for (i = 0; i < size; i++) {
         // Write null bytes to the buffer.
         buf[offset + i] = '\0';
     }
-    return size;
+    return 0;
 }
 
 void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id) {

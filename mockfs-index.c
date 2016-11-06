@@ -96,7 +96,8 @@ int main(int argc, char *argv[]) {
         parent_path[ftwbuf->base] = '\0';
         struct stat st;
         if (verbose_flag) {
-            for(int i=1; i<ftwbuf->level;i++)
+            int i;
+            for(i=1; i<ftwbuf->level;i++)
                 printf("-");
             printf("%s\n", &pathname[ftwbuf->base]);
         }
