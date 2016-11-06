@@ -17,8 +17,7 @@
 
 #define PATH_SIZE 255
 
-#define INSERT_QUERY "INSERT INTO FILESYSTEM(INO,P_INO,NAME,MODE) "  \
-         "VALUES (%lu, %lu, \"%s\", %d);"
+#define INSERT_QUERY "INSERT INTO FILESYSTEM(INO,P_INO,NAME,MODE) VALUES (?, ?, ?, ?);"
 
 #endif //MOCKFS_MOCKFS_INDEX_H
 

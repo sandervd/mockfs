@@ -102,8 +102,17 @@ int main(int argc, char *argv[]) {
         if (strcpy(path, ".")) {
             path[0] = '/';
         }
-        sprintf(sql, INSERT_QUERY, status->st_ino, parent_ino, &path[ftwbuf->base], status->st_mode);
-        rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
+
+        sqlite3_stmt* sql_statement = NULL;
+        const char* pszUnused;
+        rc = sqlite3_prepare_v2(db, INSERT_QUERY, -1, &sql_statement, &pszUnused);
+        sqlite3_bind_int(sql_statement, 1, (int) status->st_ino);
+        sqlite3_bind_int(sql_statement, 2, (int) parent_ino);
+        sqlite3_bind_text(sql_statement, 3, &path[ftwbuf->base], -1, SQLITE_STATIC);
+        sqlite3_bind_int(sql_statement, 4, (int) status->st_mode);
+        sqlite3_step (sql_statement);
+        sqlite3_finalize (sql_statement);
+
         if (rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
             sqlite3_free(zErrMsg);
