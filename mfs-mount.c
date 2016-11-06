@@ -32,9 +32,15 @@ static int mfs_fuse_getattr(const char *path, struct stat *stbuf) {
     inode = get_inode_from_path(db, path);
 
     if (inode.id != 0) {
-        stbuf->st_mode = inode.mode;
+        stbuf->st_mode = inode.st_mode;
         stbuf->st_nlink = 2;
         stbuf->st_ino = inode.id;
+        stbuf->st_uid = inode.st_uid;
+        stbuf->st_gid = inode.st_gid;
+        stbuf->st_size = inode.st_size;
+        stbuf->st_atime = inode.st_atime;
+        stbuf->st_mtime = inode.st_mtime;
+        stbuf->st_ctime = inode.st_ctime;
     }
     else
         res = -ENOENT;
@@ -153,7 +159,7 @@ void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id) {
         inode.id = (ino_t) sqlite3_column_int(res, 0);
         inode.pid = (ino_t) sqlite3_column_int(res, 1);
         strcpy(inode.name, sqlite3_column_text(res, 2));
-        inode.mode = (__mode_t) sqlite3_column_int(res, 3);
+        inode.st_mode = (__mode_t) sqlite3_column_int(res, 3);
         items[loop] = inode;
         loop++;
     }
@@ -206,7 +212,7 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         dir[0] = '/';
         dir[1] = '\0';
     }
-    #define SELECT_Q "SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = ? AND parent_st_ino = ?;"
+    #define SELECT_Q "SELECT st_ino, parent_st_ino, name, st_mode, st_uid, st_gid, st_size, st_atime, st_mtime, st_ctime FROM FILESYSTEM WHERE name = ? AND parent_st_ino = ?;"
     sqlite3_stmt* sql_statement = NULL;
     const char* pszUnused;
     rc = sqlite3_prepare_v2(db, SELECT_Q, -1, &sql_statement, &pszUnused);
@@ -221,7 +227,13 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         inode.id = (__ino_t) sqlite3_column_int(sql_statement, 0);
         inode.pid = (__ino_t) sqlite3_column_int(sql_statement, 1);
         strcpy(inode.name, sqlite3_column_text(sql_statement, 2));
-        inode.mode = (__mode_t) sqlite3_column_int(sql_statement, 3);
+        inode.st_mode = (__mode_t) sqlite3_column_int(sql_statement, 3);
+        inode.st_uid = (__uid_t) sqlite3_column_int(sql_statement, 4);
+        inode.st_gid = (__gid_t) sqlite3_column_int(sql_statement, 5);
+        inode.st_size = (__off_t) sqlite3_column_int(sql_statement, 6);
+        inode.st_atime = (__time_t) sqlite3_column_int(sql_statement, 7);
+        inode.st_mtime = (__time_t) sqlite3_column_int(sql_statement, 8);
+        inode.st_ctime = (__time_t) sqlite3_column_int(sql_statement, 9);
     }
     sqlite3_finalize (sql_statement);
     return inode;

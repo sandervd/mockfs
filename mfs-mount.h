@@ -36,5 +36,11 @@ struct inode {
     __ino_t id;
     __ino_t pid;
     char name[255];
-    __mode_t mode;
+    __mode_t st_mode;
+    __uid_t st_uid;
+    __gid_t st_gid;
+    __off_t st_size;
+    __time_t st_atime;
+    __time_t st_mtime;
+    __time_t st_ctime;
 };
