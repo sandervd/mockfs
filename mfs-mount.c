@@ -31,9 +31,10 @@ static int mfs_fuse_getattr(const char *path, struct stat *stbuf) {
 
     inode = get_inode_from_path(db, path);
 
-    if (inode.id != -1) {
+    if (inode.id != 0) {
         stbuf->st_mode = inode.mode;
         stbuf->st_nlink = 2;
+        stbuf->st_ino = inode.id;
     }
     else
         res = -ENOENT;
@@ -50,9 +51,10 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     // char *zErrMsg = 0;
     int rc;
     struct inode inode;
+    // @TODO Implement a vector to make size dynamic.
     struct inode items[200];
     for (int i = 0; i < 200; i++) {
-        items[i].id = -1;
+        items[i].id = 0;
     }
     rc = sqlite3_open("fileindex", &db);
 
@@ -65,7 +67,7 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     // Get contents of directory inode.
     get_inodes_from_dir(db, items, inode.id);
     int i = 0;
-    while (i< 200 && items[i].id != -1) {
+    while (i< 200 && items[i].id != 0) {
         filler(buf, items[i].name, NULL, 0);
         i++;
     }
@@ -78,7 +80,18 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 
 static int mfs_fuse_open(const char *path, struct fuse_file_info *fi) {
-    if (strcmp(path, hello_path) != 0)
+    sqlite3 *db;
+    // char *zErrMsg = 0;
+    int rc;
+    struct inode inode;
+    rc = sqlite3_open("fileindex", &db);
+    // Get directory inode.
+    if (rc) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        exit(EXIT_FAILURE);
+    }
+
+    if (inode.id == 0)
         return -ENOENT;
 
     if ((fi->flags & 3) != O_RDONLY)
@@ -91,7 +104,22 @@ static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
                          struct fuse_file_info *fi) {
     size_t len;
     (void) fi;
-    if (strcmp(path, hello_path) != 0)
+
+    sqlite3 *db;
+    // char *zErrMsg = 0;
+    int rc;
+    struct inode inode;
+    rc = sqlite3_open("fileindex", &db);
+    // Get directory inode.
+    if (rc) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        exit(EXIT_FAILURE);
+    }
+
+    inode = get_inode_from_path(db, path);
+
+
+    if (inode.id == 0)
         return -ENOENT;
 
     len = strlen(hello_str);
@@ -105,15 +133,15 @@ static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
     return size;
 }
 
-void get_inodes_from_dir(sqlite3 *db, struct inode *items, int id) {
+void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id) {
     char sql[500];
     int loop = 0;
     struct inode inode;
-    inode.id = -1;
+    inode.id = 0;
     int rc;
     char *zErrMsg = 0;
     const char *tail;
-    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE P_INO = %d", id);
+    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE P_INO = %d", (int) id);
     sqlite3_stmt *res;
     rc = sqlite3_prepare_v2(db, sql, 1000, &res, &tail);
     if (rc != SQLITE_OK) {
@@ -122,10 +150,10 @@ void get_inodes_from_dir(sqlite3 *db, struct inode *items, int id) {
         exit(EXIT_FAILURE);
     }
     while (sqlite3_step(res) == SQLITE_ROW) {
-        inode.id = sqlite3_column_int(res, 0);
-        inode.pid = sqlite3_column_int(res, 1);
+        inode.id = (ino_t) sqlite3_column_int(res, 0);
+        inode.pid = (ino_t) sqlite3_column_int(res, 1);
         strcpy(inode.name, sqlite3_column_text(res, 2));
-        inode.mode = sqlite3_column_int(res, 3);
+        inode.mode = (__mode_t) sqlite3_column_int(res, 3);
         items[loop] = inode;
         loop++;
     }
@@ -137,14 +165,14 @@ struct inode get_inode_from_path(sqlite3 *db, const char *path) {
     int i = 0;
     int j = 0;
     struct inode inode;
-    inode.id = -1;
+    inode.id = 0;
     while (path[i] != '\0') {
         // Full substring
         sub[j] = '\0';
         if (path[i] == '/') {
             inode = lookup_inode(db, sub, &inode);
             // Not found.
-            if (inode.id == -1) {
+            if (inode.id == 0) {
                 return inode;
             }
             j = 0;
@@ -166,11 +194,11 @@ struct inode get_inode_from_path(sqlite3 *db, const char *path) {
 struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
     char sql[500];
     struct inode inode;
-    inode.id = -1;
+    inode.id = 0;
     int rc;
     char *zErrMsg = 0;
     const char *tail;
-    int parent_id = parent_inode->id;
+    __ino_t parent_id = parent_inode->id;
     if (parent_id < 0) {
         parent_id = 0;
     }
@@ -179,7 +207,7 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         dir[1] = '\0';
     }
 
-    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE NAME = \"%s\" AND P_INO = %d", dir, parent_id);
+    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE NAME = \"%s\" AND P_INO = %d", dir, (int) parent_id);
     sqlite3_stmt *res;
     rc = sqlite3_prepare_v2(db, sql, 1000, &res, &tail);
     if (rc != SQLITE_OK) {
@@ -188,10 +216,10 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         exit(EXIT_FAILURE);
     }
     while (sqlite3_step(res) == SQLITE_ROW) {
-        inode.id = sqlite3_column_int(res, 0);
-        inode.pid = sqlite3_column_int(res, 1);
+        inode.id = (__ino_t) sqlite3_column_int(res, 0);
+        inode.pid = (__ino_t) sqlite3_column_int(res, 1);
         strcpy(inode.name, sqlite3_column_text(res, 2));
-        inode.mode = sqlite3_column_int(res, 3);
+        inode.mode = (__mode_t) sqlite3_column_int(res, 3);
     }
     return inode;
 }

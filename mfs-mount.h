@@ -30,11 +30,11 @@ static int mfs_fuse_open(const char *path, struct fuse_file_info *fi);
 static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
                          struct fuse_file_info *fi);
 
-void get_inodes_from_dir(sqlite3 *db, struct inode *items, int id);
+void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id);
 
 struct inode {
-    int id;
-    int pid;
+    __ino_t id;
+    __ino_t pid;
     char name[255];
-    int mode;
+    __mode_t mode;
 };
