@@ -65,10 +65,16 @@ int main(int argc, char *argv[]) {
 
     /* Create SQL statement */
     strcpy(sql, "CREATE TABLE FILESYSTEM("  \
-         "INO      UNSIGNED BIG INT     PRIMARY KEY," \
-         "P_INO    UNSIGNED BIG INT     NOT NULL," \
-         "NAME     TEXT                 NOT NULL," \
-         "MODE     INT                  NOT NULL);");
+         "name            TEXT                 NOT NULL," \
+         "st_ino          UNSIGNED BIG INT     PRIMARY KEY," \
+         "parent_st_ino   UNSIGNED BIG INT     NOT NULL," \
+         "st_mode          INT                  NOT NULL," \
+         "st_uid          INT                  NOT NULL," \
+         "st_gid          INT                  NOT NULL," \
+         "st_size          INT                  NOT NULL," \
+         "st_atime          INT                  NOT NULL," \
+         "st_mtime          INT                  NOT NULL," \
+         "st_ctime          INT                  NOT NULL);");
 
     /* Execute SQL statement */
     rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
@@ -110,6 +116,12 @@ int main(int argc, char *argv[]) {
         sqlite3_bind_int(sql_statement, 2, (int) parent_ino);
         sqlite3_bind_text(sql_statement, 3, &path[ftwbuf->base], -1, SQLITE_STATIC);
         sqlite3_bind_int(sql_statement, 4, (int) status->st_mode);
+        sqlite3_bind_int(sql_statement, 5, (int) status->st_uid);
+        sqlite3_bind_int(sql_statement, 6, (int) status->st_gid);
+        sqlite3_bind_int(sql_statement, 7, (int) status->st_size);
+        sqlite3_bind_int(sql_statement, 8, (int) status->st_atime);
+        sqlite3_bind_int(sql_statement, 9, (int) status->st_mtime);
+        sqlite3_bind_int(sql_statement, 10, (int) status->st_ctime);
         sqlite3_step (sql_statement);
         sqlite3_finalize (sql_statement);
 

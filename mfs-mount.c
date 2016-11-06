@@ -141,7 +141,7 @@ void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id) {
     int rc;
     char *zErrMsg = 0;
     const char *tail;
-    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE P_INO = %d", (int) id);
+    sprintf(sql, "SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE parent_st_ino = %d", (int) id);
     sqlite3_stmt *res;
     rc = sqlite3_prepare_v2(db, sql, 1000, &res, &tail);
     if (rc != SQLITE_OK) {
@@ -207,7 +207,7 @@ struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode) {
         dir[1] = '\0';
     }
 
-    sprintf(sql, "SELECT INO, P_INO, NAME, MODE FROM FILESYSTEM WHERE NAME = \"%s\" AND P_INO = %d", dir, (int) parent_id);
+    sprintf(sql, "SELECT st_ino, parent_st_ino, name, st_mode FROM FILESYSTEM WHERE name = \"%s\" AND parent_st_ino = %d", dir, (int) parent_id);
     sqlite3_stmt *res;
     rc = sqlite3_prepare_v2(db, sql, 1000, &res, &tail);
     if (rc != SQLITE_OK) {
