@@ -19,9 +19,9 @@
 
 #endif //MOCKFS_MFS_MOUNT_H_H
 
-struct inode lookup_inode(sqlite3 *db, char *dir, struct inode *parent_inode);
+struct inode lookup_inode(char *dir, struct inode *parent_inode);
 
-struct inode get_inode_from_path(sqlite3 *db, const char *path);
+struct inode get_inode_from_path(const char *path);
 
 static int mfs_fuse_getattr(const char *path, struct stat *stbuf);
 static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
@@ -30,7 +30,7 @@ static int mfs_fuse_open(const char *path, struct fuse_file_info *fi);
 static int mfs_fuse_read(const char *path, char *buf, size_t size, off_t offset,
                          struct fuse_file_info *fi);
 
-void get_inodes_from_dir(sqlite3 *db, struct inode *items, __ino_t id);
+void get_inodes_from_dir(struct inode *items, __ino_t id);
 
 struct inode {
     __ino_t id;
