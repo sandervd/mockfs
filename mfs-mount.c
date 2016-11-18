@@ -1,5 +1,7 @@
 #include "mfs-mount.h"
 
+char *database_path = NULL;
+
 static struct fuse_operations mfs_fuse_operations = {
         .getattr    = mfs_fuse_getattr,
         .readdir    = mfs_fuse_readdir,
@@ -7,8 +9,37 @@ static struct fuse_operations mfs_fuse_operations = {
         .read       = mfs_fuse_read,
 };
 
+static int mfs_fuse_opt_proc(void* data, const char* arg, int key, struct fuse_args* outargs);
+
 int main(int argc, char *argv[]) {
-    return fuse_main(argc, argv, &mfs_fuse_operations, NULL);
+    // @todo Provide a help message.
+    // This is the fuse-style parser for the arguments
+    // after which the database name and mountpoint
+    // should have been set
+    struct fuse_args custom_args = FUSE_ARGS_INIT(argc, argv);
+    if(0 != fuse_opt_parse(&custom_args, NULL, NULL, mfs_fuse_opt_proc)){
+        exit(EXIT_FAILURE);
+    }
+    if (database_path == '\0') {
+        fprintf(stderr, "Could not find database.\nUsage: mfs-mount fileindex mountpoint\n");
+        return errno;
+    }
+    return fuse_main(custom_args.argc, custom_args.argv, &mfs_fuse_operations, NULL);
+}
+
+static int mfs_fuse_opt_proc(void* data, const char* arg, int key, struct fuse_args* outargs) {
+    if (key == -2) {
+        static int count = 0;
+        // First argument is the path to the database.
+        if (count == 0) {
+            database_path = realpath(arg, NULL);
+            count++;
+            // Returning 0 removes this argument from the list.
+            return 0;
+        }
+    }
+    // Persist other arguments.
+    return 1;
 }
 
 
@@ -102,7 +133,7 @@ void get_inodes_from_dir(struct inode *items, __ino_t id) {
     // Init db.
     sqlite3 *db;
     int rc;
-    rc = sqlite3_open_v2("fileindex", &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, NULL);
+    rc = sqlite3_open_v2(database_path, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, NULL);
 
     // Get directory inode.
     if (rc) {
@@ -172,7 +203,7 @@ struct inode lookup_inode(char *dir, struct inode *parent_inode) {
     // Init db.
     sqlite3 *db;
     int rc;
-    rc = sqlite3_open_v2("fileindex", &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, NULL);
+    rc = sqlite3_open_v2(database_path, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, NULL);
 
     // Get directory inode.
     if (rc) {

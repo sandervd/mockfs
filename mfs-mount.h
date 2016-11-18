@@ -1,7 +1,3 @@
-//
-// Created by sander on 02.11.16.
-//
-
 #ifndef MOCKFS_MFS_MOUNT_H_H
 #define MOCKFS_MFS_MOUNT_H_H
 
