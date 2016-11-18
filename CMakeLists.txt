@@ -12,3 +12,5 @@ add_executable(mfs-mount ${SOURCE_FILES_MOUNT})
 target_link_libraries(mfs-index sqlite3)
 target_link_libraries(mfs-mount sqlite3)
 target_link_libraries(mfs-mount fuse)
+install(TARGETS mfs-index mfs-mount
+        RUNTIME DESTINATION bin)
