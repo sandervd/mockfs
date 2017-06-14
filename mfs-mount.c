@@ -71,15 +71,15 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                             off_t offset, struct fuse_file_info *fi) {
     (void) offset;
     (void) fi;
-
+    int const list_size = 1000;
 
     // char *zErrMsg = 0;
 
     struct inode inode;
     // @TODO Implement a vector to make size dynamic.
-    struct inode items[200];
+    struct inode items[list_size];
     int i;
-    for (i = 0; i < 200; i++) {
+    for (i = 0; i < list_size; i++) {
         items[i].id = 0;
     }
 
