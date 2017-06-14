@@ -71,7 +71,7 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                             off_t offset, struct fuse_file_info *fi) {
     (void) offset;
     (void) fi;
-    int const list_size = 1000;
+    int const list_size = 10000;
 
     // char *zErrMsg = 0;
 
@@ -87,7 +87,7 @@ static int mfs_fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     // Get contents of directory inode.
     get_inodes_from_dir(items, inode.id);
     i = 0;
-    while (i< 200 && items[i].id != 0) {
+    while (i<list_size && items[i].id != 0) {
         filler(buf, items[i].name, NULL, 0);
         i++;
     }
